@@ -1,8 +1,10 @@
+import { UNISWAP_FACTORY_ABI, UNISWAP_PAIR_ABI, UNISWAP_QUERY_ABI } from "./abi";
 import { Contract, providers, Wallet } from "ethers";
 import { UniswappyV2EthPair } from "./UniswappyV2EthPair";
+// import { UNISWAP_LOOKUP_CONTRACT_ADDRESS, WETH_ADDRESS } from "./addresses";
 // import { FACTORY_ADDRESSES } from "./addresses";
 
-// const UNISWAP_LOOKUP_CONTRACT_ADDRESS = '0x5EF1009b9FCD4fec3094a5564047e190D72Bd511'
+const UNISWAP_LOOKUP_CONTRACT_ADDRESS = '0x5EF1009b9FCD4fec3094a5564047e190D72Bd511'
 // const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
 const SUSHISWAP_FACTORY_ADDRESS = '0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac';
 const UNISWAP_FACTORY_ADDRESS = '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f';
@@ -26,8 +28,53 @@ const ETHEREUM_RPC_URL = "https://eth-mainnet.public.blastapi.io"
 const provider = new providers.StaticJsonRpcProvider(ETHEREUM_RPC_URL);
 
 async function main() {
-    const markets = await UniswappyV2EthPair.getUniswapMarketsByToken(provider, FACTORY_ADDRESSES);
-    console.log(markets);
+  // const markets = await UniswappyV2EthPair.getUniswapMarketsByToken(provider, FACTORY_ADDRESSES);
+  // console.log(markets);
+
+  const uniswapQuery = new Contract(UNISWAP_LOOKUP_CONTRACT_ADDRESS, UNISWAP_QUERY_ABI, provider);
+
+  const factoryAddress = UNISWAP_FACTORY_ADDRESS;
+  // const factoryAddress = SUSHISWAP_FACTORY_ADDRESS;
+
+  const pairs: Array<Array<string>> = (
+    await uniswapQuery.functions.getPairsByIndexRange(
+      factoryAddress, 
+      0,
+      10,
+    )
+  )[0];
+
+  console.log(pairs);
+
+  // let result = await uniswapQuery.functions.getReservesByPairs(
+  //     [factoryAddress],
+  //   );
+  // console.log(result);
 }
 
-main();
+async function contract_test() {
+  const uniswapFactoryQuery = new Contract(
+    UNISWAP_FACTORY_ADDRESS,
+    UNISWAP_FACTORY_ABI,
+    provider
+  );
+
+  const poolAddr :Array<string> = (await uniswapFactoryQuery.functions.allPairs(0));
+  console.log(poolAddr);
+
+  const uniswapPairQuery = new Contract(
+    poolAddr[0],
+    UNISWAP_PAIR_ABI,
+    provider
+  )
+
+  const token0 = await uniswapPairQuery.functions.token0();
+  console.log(token0);
+}
+
+async function provider_test() {
+}
+
+contract_test();
+
+// main();
