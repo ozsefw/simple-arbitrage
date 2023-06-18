@@ -36,7 +36,11 @@ export function getBestCrossedMarket(crossedMarkets: Array<EthMarket>[], tokenAd
     for (const size of TEST_VOLUMES) {
       const tokensOutFromBuyingSize = buyFromMarket.getTokensOut(WETH_ADDRESS, tokenAddress, size);
       const proceedsFromSellingTokens = sellToMarket.getTokensOut(tokenAddress, WETH_ADDRESS, tokensOutFromBuyingSize)
+
+      // profit，交易之后，能赚多少eth
       const profit = proceedsFromSellingTokens.sub(size);
+
+      // 如果当前的利润小于以前找到的利润，再实时1/2的volume是否有更多的利润(只是一种尝试，逻辑上不完整)
       if (bestCrossedMarket !== undefined && profit.lt(bestCrossedMarket.profit)) {
         // If the next size up lost value, meet halfway. TODO: replace with real binary search
         const trySize = size.add(bestCrossedMarket.volume).div(2)
@@ -99,7 +103,11 @@ export class Arbitrage {
       const pricedMarkets = _.map(markets, (ethMarket: EthMarket) => {
         return {
           ethMarket: ethMarket,
+          // 如果要取出0.01eth, 需要放入多少配对的token
+          // 就是buy 0.01个eth，需要花费多少token
           buyTokenPrice: ethMarket.getTokensIn(tokenAddress, WETH_ADDRESS, ETHER.div(100)),
+          // 如果放入0.01eth，能获取多少配对的token
+          // 卖0.01个eth，能拿到多少token
           sellTokenPrice: ethMarket.getTokensOut(WETH_ADDRESS, tokenAddress, ETHER.div(100)),
         }
       });
@@ -114,10 +122,12 @@ export class Arbitrage {
       }
 
       const bestCrossedMarket = getBestCrossedMarket(crossedMarkets, tokenAddress);
+      // 保留利润大于0.001个eth的交易
       if (bestCrossedMarket !== undefined && bestCrossedMarket.profit.gt(ETHER.div(1000))) {
         bestCrossedMarkets.push(bestCrossedMarket)
       }
     }
+    // 利润从大到小排序
     bestCrossedMarkets.sort((a, b) => a.profit.lt(b.profit) ? 1 : a.profit.gt(b.profit) ? -1 : 0)
     return bestCrossedMarkets
   }

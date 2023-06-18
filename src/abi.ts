@@ -1,4 +1,3 @@
-import { UNISWAP_FACTORY_ADDRESS } from "./addresses"
 
 export const UNISWAP_QUERY_ABI = [
   {

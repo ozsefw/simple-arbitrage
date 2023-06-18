@@ -54,7 +54,10 @@ async function main() {
 
   const markets = await UniswappyV2EthPair.getUniswapMarketsByToken(provider, FACTORY_ADDRESSES);
   provider.on('block', async (blockNumber) => {
+
+    // update pool which is included by more than one dex
     await UniswappyV2EthPair.updateReserves(provider, markets.allMarketPairs);
+
     const bestCrossedMarkets = await arbitrage.evaluateMarkets(markets.marketsByToken);
     if (bestCrossedMarkets.length === 0) {
       console.log("No crossed markets")

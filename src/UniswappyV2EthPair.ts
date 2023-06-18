@@ -45,6 +45,44 @@ export class UniswappyV2EthPair extends EthMarket {
     return []
   }
 
+  // [
+  //   UniswappyV2EthPair {
+  //     _marketAddress: '0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc',
+  //     _tokens: [
+  //       '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+  //       '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
+  //     ],
+  //     _protocol: '',
+  //     _tokenBalances: {
+  //       '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48': [BigNumber],
+  //       '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2': [BigNumber]
+  //     }
+  //   },
+  //   UniswappyV2EthPair {
+  //     _marketAddress: '0x12EDE161c702D1494612d19f05992f43aa6A26FB',
+  //     _tokens: [
+  //       '0x06AF07097C9Eeb7fD685c692751D5C66dB49c215',
+  //       '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
+  //     ],
+  //     _protocol: '',
+  //     _tokenBalances: {
+  //       '0x06AF07097C9Eeb7fD685c692751D5C66dB49c215': [BigNumber],
+  //       '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2': [BigNumber]
+  //     }
+  //   },
+  //   UniswappyV2EthPair {
+  //     _marketAddress: '0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11',
+  //     _tokens: [
+  //       '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+  //       '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
+  //     ],
+  //     _protocol: '',
+  //     _tokenBalances: {
+  //       '0x6B175474E89094C44Da98b954EedeAC495271d0F': [BigNumber],
+  //       '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2': [BigNumber]
+  //     }
+  //   }
+  // ]
   static async getUniswappyMarkets(provider: providers.JsonRpcProvider, factoryAddress: string): Promise<Array<UniswappyV2EthPair>> {
     const uniswapQuery = new Contract(UNISWAP_LOOKUP_CONTRACT_ADDRESS, UNISWAP_QUERY_ABI, provider);
 
@@ -77,6 +115,18 @@ export class UniswappyV2EthPair extends EthMarket {
   }
 
   static async getUniswapMarketsByToken(provider: providers.JsonRpcProvider, factoryAddresses: Array<string>): Promise<GroupedMarkets> {
+    // UniswappyV2EthPair {
+    //   _marketAddress: '0x58Dc5a51fE44589BEb22E8CE67720B5BC5378009',
+    //   _tokens: [
+    //     '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+    //     '0xD533a949740bb3306d119CC777fa900bA034cd52'
+    //   ],
+    //   _protocol: '',
+    //   _tokenBalances: {
+    //     '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2': [BigNumber],
+    //     '0xD533a949740bb3306d119CC777fa900bA034cd52': [BigNumber]
+    //   }
+    // },
     const allPairs = await Promise.all(
       _.map(factoryAddresses, factoryAddress => UniswappyV2EthPair.getUniswappyMarkets(provider, factoryAddress))
     )
@@ -135,12 +185,14 @@ export class UniswappyV2EthPair extends EthMarket {
     }
   }
 
+  // \Delta x
   getTokensIn(tokenIn: string, tokenOut: string, amountOut: BigNumber): BigNumber {
     const reserveIn = this._tokenBalances[tokenIn]
     const reserveOut = this._tokenBalances[tokenOut]
     return this.getAmountIn(reserveIn, reserveOut, amountOut);
   }
 
+  // \Delta y
   getTokensOut(tokenIn: string, tokenOut: string, amountIn: BigNumber): BigNumber {
     const reserveIn = this._tokenBalances[tokenIn]
     const reserveOut = this._tokenBalances[tokenOut]
