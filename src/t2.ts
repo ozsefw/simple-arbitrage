@@ -30,5 +30,12 @@ function t1() {
 //   console.log(result_2);
 }
 
-t1();
+function t2(){
+  for (let i=0; i<10;i++){
+    const target :Array<number> = [...[i],i];
+    console.log(target);
+  }
+}
+
+t2();
     

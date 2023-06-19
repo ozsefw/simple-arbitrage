@@ -233,6 +233,7 @@ export class UniswappyV2EthPair extends EthMarket {
     let amount0Out = BigNumber.from(0)
     let amount1Out = BigNumber.from(0)
     let tokenOut: string;
+
     if (tokenIn === this.tokens[0]) {
       tokenOut = this.tokens[1]
       amount1Out = this.getTokensOut(tokenIn, tokenOut, amountIn)
@@ -242,6 +243,7 @@ export class UniswappyV2EthPair extends EthMarket {
     } else {
       throw new Error("Bad token input address")
     }
+
     const populatedTransaction = await UniswappyV2EthPair.uniswapInterface.populateTransaction.swap(amount0Out, amount1Out, recipient, []);
     if (populatedTransaction === undefined || populatedTransaction.data === undefined) throw new Error("HI")
     return populatedTransaction.data;

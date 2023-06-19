@@ -31,8 +31,11 @@ const TEST_VOLUMES = [
 export function getBestCrossedMarket(crossedMarkets: Array<EthMarket>[], tokenAddress: string): CrossedMarketDetails | undefined {
   let bestCrossedMarket: CrossedMarketDetails | undefined = undefined;
   for (const crossedMarket of crossedMarkets) {
+    // 0,  token -> market -> eth (sellToMarket)
+    // 1,  eth -> market -> token (buyFromMarket)
     const sellToMarket = crossedMarket[0]
     const buyFromMarket = crossedMarket[1]
+
     for (const size of TEST_VOLUMES) {
       const tokensOutFromBuyingSize = buyFromMarket.getTokensOut(WETH_ADDRESS, tokenAddress, size);
       const proceedsFromSellingTokens = sellToMarket.getTokensOut(tokenAddress, WETH_ADDRESS, tokensOutFromBuyingSize)
@@ -40,7 +43,7 @@ export function getBestCrossedMarket(crossedMarkets: Array<EthMarket>[], tokenAd
       // profit，交易之后，能赚多少eth
       const profit = proceedsFromSellingTokens.sub(size);
 
-      // 如果当前的利润小于以前找到的利润，再实时1/2的volume是否有更多的利润(只是一种尝试，逻辑上不完整)
+      // 如果当前的利润小于以前找到的利润，再试试1/2的volume是否有更多的利润(只是一种尝试，逻辑上不完整)
       if (bestCrossedMarket !== undefined && profit.lt(bestCrossedMarket.profit)) {
         // If the next size up lost value, meet halfway. TODO: replace with real binary search
         const trySize = size.add(bestCrossedMarket.volume).div(2)
@@ -104,10 +107,10 @@ export class Arbitrage {
         return {
           ethMarket: ethMarket,
           // 如果要取出0.01eth, 需要放入多少配对的token
-          // 就是buy 0.01个eth，需要花费多少token
+          // buy eth (token price)
           buyTokenPrice: ethMarket.getTokensIn(tokenAddress, WETH_ADDRESS, ETHER.div(100)),
           // 如果放入0.01eth，能获取多少配对的token
-          // 卖0.01个eth，能拿到多少token
+          // sell eth (token_price)
           sellTokenPrice: ethMarket.getTokensOut(WETH_ADDRESS, tokenAddress, ETHER.div(100)),
         }
       });
@@ -116,6 +119,8 @@ export class Arbitrage {
       for (const pricedMarket of pricedMarkets) {
         _.forEach(pricedMarkets, pm => {
           if (pm.sellTokenPrice.gt(pricedMarket.buyTokenPrice)) {
+            // 0,  token -> market -> eth
+            // 1,  eth -> market -> token 
             crossedMarkets.push([pricedMarket.ethMarket, pm.ethMarket])
           }
         })
@@ -137,9 +142,28 @@ export class Arbitrage {
     for (const bestCrossedMarket of bestCrossedMarkets) {
 
       console.log("Send this much WETH", bestCrossedMarket.volume.toString(), "get this much profit", bestCrossedMarket.profit.toString())
-      const buyCalls = await bestCrossedMarket.buyFromMarket.sellTokensToNextMarket(WETH_ADDRESS, bestCrossedMarket.volume, bestCrossedMarket.sellToMarket);
-      const inter = bestCrossedMarket.buyFromMarket.getTokensOut(WETH_ADDRESS, bestCrossedMarket.tokenAddress, bestCrossedMarket.volume)
-      const sellCallData = await bestCrossedMarket.sellToMarket.sellTokens(bestCrossedMarket.tokenAddress, inter, this.bundleExecutorContract.address);
+
+      //  eth -> market -> token (buyFromMarket)
+      const buyCalls = await bestCrossedMarket.buyFromMarket.
+        sellTokensToNextMarket(
+          WETH_ADDRESS,
+          bestCrossedMarket.volume,
+          bestCrossedMarket.sellToMarket
+        );
+
+      const inter = bestCrossedMarket.buyFromMarket.
+        getTokensOut(
+          WETH_ADDRESS,
+          bestCrossedMarket.tokenAddress,
+          bestCrossedMarket.volume
+        )
+
+      const sellCallData = await bestCrossedMarket.sellToMarket.
+        sellTokens(
+          bestCrossedMarket.tokenAddress,
+          inter,
+          this.bundleExecutorContract.address
+        );
 
       const targets: Array<string> = [...buyCalls.targets, bestCrossedMarket.sellToMarket.marketAddress]
       const payloads: Array<string> = [...buyCalls.data, sellCallData]
