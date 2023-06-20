@@ -53,8 +53,8 @@ async function main() {
     new Contract(BUNDLE_EXECUTOR_ADDRESS, BUNDLE_EXECUTOR_ABI, provider) )
 
   const markets = await UniswappyV2EthPair.getUniswapMarketsByToken(provider, FACTORY_ADDRESSES);
-  provider.on('block', async (blockNumber) => {
 
+  provider.on('block', async (blockNumber) => {
     // update pool which is included by more than one dex
     await UniswappyV2EthPair.updateReserves(provider, markets.allMarketPairs);
 

@@ -151,6 +151,7 @@ export class Arbitrage {
           bestCrossedMarket.sellToMarket
         );
 
+      //  token -> market -> eth (sellToMarket)
       const inter = bestCrossedMarket.buyFromMarket.
         getTokensOut(
           WETH_ADDRESS,

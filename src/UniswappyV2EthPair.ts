@@ -115,27 +115,36 @@ export class UniswappyV2EthPair extends EthMarket {
   }
 
   static async getUniswapMarketsByToken(provider: providers.JsonRpcProvider, factoryAddresses: Array<string>): Promise<GroupedMarkets> {
-    // UniswappyV2EthPair {
-    //   _marketAddress: '0x58Dc5a51fE44589BEb22E8CE67720B5BC5378009',
-    //   _tokens: [
-    //     '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
-    //     '0xD533a949740bb3306d119CC777fa900bA034cd52'
-    //   ],
-    //   _protocol: '',
-    //   _tokenBalances: {
-    //     '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2': [BigNumber],
-    //     '0xD533a949740bb3306d119CC777fa900bA034cd52': [BigNumber]
-    //   }
-    // },
+    // [
+    //  {
+    //    _marketAddress: '0x58Dc5a51fE44589BEb22E8CE67720B5BC5378009',
+    //    _tokens: [
+    //      '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // token0 erc20
+    //      '0xD533a949740bb3306d119CC777fa900bA034cd52'  // token1 erc20
+    //    ],
+    //    _protocol: '',
+    //    _tokenBalances: {
+    //      '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2': 0,
+    //      '0xD533a949740bb3306d119CC777fa900bA034cd52': 0
+    //    }
+    //  },
+    //  ...
+    // ]
     const allPairs = await Promise.all(
       _.map(factoryAddresses, factoryAddress => UniswappyV2EthPair.getUniswappyMarkets(provider, factoryAddress))
     )
 
+    // {
+    //   'tokenA': [pairA1, pairA2, pairA3],
+    //   'tokenB': [pairB1, pairB2, pairB3],
+    //   'tokenC': [pairC]
+    // }
     const marketsByTokenAll = _.chain(allPairs)
       .flatten()
       .groupBy(pair => pair.tokens[0] === WETH_ADDRESS ? pair.tokens[1] : pair.tokens[0])
       .value()
 
+    // 删选出market长度大于1的
     const allMarketPairs = _.chain(
       _.pickBy(marketsByTokenAll, a => a.length > 1) // weird TS bug, chain'd pickBy is Partial<>
     )
@@ -143,8 +152,10 @@ export class UniswappyV2EthPair extends EthMarket {
       .flatten()
       .value()
 
+    // 对marketpair的token的数量更新
     await UniswappyV2EthPair.updateReserves(provider, allMarketPairs);
 
+    // 删选出eth的token数量大于1的
     const marketsByToken = _.chain(allMarketPairs)
       .filter(pair => (pair.getBalance(WETH_ADDRESS).gt(ETHER)))
       .groupBy(pair => pair.tokens[0] === WETH_ADDRESS ? pair.tokens[1] : pair.tokens[0])
