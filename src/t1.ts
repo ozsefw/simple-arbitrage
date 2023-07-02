@@ -141,8 +141,8 @@ async function getUniswappyMarkets(provider: providers.JsonRpcProvider, factoryA
 async function getpair_t3() {
   const factory_list = FACTORY_ADDRESSES;
   const allPairs = await Promise.all(
-    _.map(factory_list, factory__address=>
-        getUniswappyMarkets(provider, factory__address))
+    _.map(factory_list, factory_address=>
+        getUniswappyMarkets(provider, factory_address))
   )
 
   console.log("allPairs: %d", allPairs.length);
