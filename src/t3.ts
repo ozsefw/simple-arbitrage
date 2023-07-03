@@ -29,7 +29,7 @@ const provider = new providers.StaticJsonRpcProvider(ETHEREUM_RPC_URL);
 const BATCH_COUNT_LIMIT = 1000;
 const UNISWAP_BATCH_SIZE = 1000;
 
-t3();
+t1();
 
 async function t3() {
   // let uni_pair;
@@ -46,11 +46,11 @@ async function t3() {
   // });
 
   // const = fs.readFileSync(file_path, "utf-8");
-  const uni_path = "sample/uniswap-v2-pair.json";
+  const uni_path = "tmp/uniswap-v2-pair.json";
   const uni_pairs = JSON.parse(fs.readFileSync(uni_path, "utf-8"));
   console.log("uni pairs: ", _.chain(uni_pairs).value().length);
 
-  const sushi_path = "sample/sushiswap-pair.json";
+  const sushi_path = "tmp/sushiswap-pair.json";
   const sushi_pairs = JSON.parse(fs.readFileSync(sushi_path, "utf-8"));
   console.log("sushi pairs: ", _.chain(sushi_pairs).value().length);
 
@@ -127,13 +127,13 @@ async function t2() {
 
 async function t1() {
   // const markets = await UniswappyV2EthPair.getUniswapMarketsByToken(provider, SUSHISWAP_FACTORY_ADDRESS);
-  // const file_path = "sample/sushiswap-pair.json";
+  // const file_path = "tmp/sushiswap-pair.json";
   // const FACTORY_ADDRESS = SUSHISWAP_FACTORY_ADDRESS;
-  // const file_path = "sample/uniswap-v2-pair.json";
+  // const file_path = "tmp/uniswap-v2-pair.json";
   // const FACTORY_ADDRESS = UNISWAP_FACTORY_ADDRESS;
-  // const file_path = "sample/cro-pair.json";
+  // const file_path = "tmp/cro-pair.json";
   // const FACTORY_ADDRESS = CRO_FACTORY_ADDRESS;
-  const file_path = "sample/lua-pair.json";
+  const file_path = "tmp/lua-pair.json";
   const FACTORY_ADDRESS = LUA_FACTORY_ADDRESS;
 
   const foramt_pairs = await getUniswappyMarkets(provider, FACTORY_ADDRESS)
