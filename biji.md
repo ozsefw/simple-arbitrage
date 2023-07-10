@@ -1,3 +1,11 @@
+## 启动anvil
+
+```sh
+anvil --fork-url="https://eth-mainnet.nodereal.io/v1/5e75d4566e0048b3b195abbf1de9f366" --fork-block-number=17600000 --compute-units-per-second=300 --no-mining
+
+anvil --fork-url="https://eth-mainnet.nodereal.io/v1/5e75d4566e0048b3b195abbf1de9f366" --fork-block-number=17589010 --compute-units-per-second=300 --chain-id=1
+```
+
 ## 运行总体流程
  - 初始化crossMarket的信息
  - 每次出现新的区块的时候
