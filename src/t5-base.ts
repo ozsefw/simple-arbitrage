@@ -119,18 +119,18 @@ export async function simulate_tx() {
   const pepe_uni_v2 = new Contract(PEPE_UNI_V2_POOL, UNI_V2_ABI, provider);
 
   try{
-    const amount_in = "1057147387365399552"
+    // const amount_in = "1057147387365399552"
 
-    const amount_out = await uni_v3_quoter.quoteExactInputSingle(
-      '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
-      '0xfb66321D7C674995dFcC2cb67A30bC978dc862AD',
-      10000,
-      amount_in,
-      "13443882501629929000910181338733598",
-    );
-    console.log(amount_out.toString());
+    // const amount_out = await uni_v3_quoter.quoteExactInputSingle(
+    //   '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+    //   '0xfb66321D7C674995dFcC2cb67A30bC978dc862AD',
+    //   10000,
+    //   amount_in,
+    //   "13443882501629929000910181338733598",
+    // );
+    // console.log(amount_out.toString());
 
-    // const pepe_amount_in = "29998097910326302650298426983"
+    const pepe_amount_in = "29998097910326302650298426983"
 
     // const [reserve0, reserve1, _] = await pepe_uni_v2.getReserves();
     // console.log(reserve0.toString());
@@ -145,12 +145,13 @@ export async function simulate_tx() {
     // );
     // console.log(result.toString());
 
-    // const result = await uni_v2_router.getAmountsOut(
-    //   pepe_amount_in,
-    //   [PEPE_ERC20, WETH_ERC20],
-    // )
+    const result = await uni_v2_router.getAmountsOut(
+      pepe_amount_in,
+      [PEPE_ERC20, WETH_ERC20],
+    )
 
-    // console.log(result[1].toString());
+    console.log(result[1].toString())
+    console.log("on-chain: ", "1068308415863593344")
 
     // 1068308415863593344
     // 1068308522694445586
@@ -179,7 +180,7 @@ export async function simulate_tx2(){
   const uni_v3_quoter = new Contract(UNI_V3_QUOTER_ADDRESS, UNI_V3_QUOTE_ABI, provider)
   const uni_v2_router = new Contract(UNI_V2_ROUTER_ADDRESS, UNI_V2_ROUTER_ABI, provider);
 
-  let base_eth_amount_in = BigNumber.from("1057147387365399552");
+  const base_eth_amount_in = BigNumber.from("1057147387365399552");
   // let last_max_result = {
   //   index: Number,
   // };
@@ -218,10 +219,10 @@ export async function simulate_tx2(){
       last_max_result = {id: i, profit: profit, in: eth_amount_in, out: eth_amount_out};
     }
     else{
-      const last_profit = last_max_result?.profit!;
-      if (last_profit < profit){
-        last_max_result = {id: i, profit: profit, in: eth_amount_in, out: eth_amount_out};
-      }
+        const last_profit = last_max_result?.profit!;
+        if (last_profit < profit){
+          last_max_result = {id: i, profit: profit, in: eth_amount_in, out: eth_amount_out};
+        }
     }
 
     // console.log(
@@ -241,4 +242,42 @@ export async function simulate_tx2(){
     last_max_result?.out,
     // profit
   );
+}
+
+export async function inspect_t01(){
+  const UNI_V2_ABI = [
+    "function getReserves() view returns (uint112, uint112, uint32)"
+  ];
+  // struct Slot0 {
+  //   // the current price
+  //   uint160 sqrtPriceX96;
+  //   // the current tick
+  //   int24 tick;
+  //   // the most-recently updated index of the observations array
+  //   uint16 observationIndex;
+  //   // the current maximum number of observations that are being stored
+  //   uint16 observationCardinality;
+  //   // the next maximum number of observations to store, triggered in observations.write
+  //   uint16 observationCardinalityNext;
+  //   // the current protocol fee as a percentage of the swap fee taken on withdrawal
+  //   // represented as an integer denominator (1/x)%
+  //   uint8 feeProtocol;
+  //   // whether the pool is locked
+  //   bool unlocked;
+  // }
+  const UNI_V3_ABI = [
+    "function slot0() view returns (uint160, int24, uint16, uint16, uint16, uint8, bool)"
+  ];
+
+  const pepe_uni_v2 = new Contract(PEPE_UNI_V2_POOL, UNI_V2_ABI, provider)
+  const pepe_uni_v3 = new Contract(PEPE_UNI_V3_POOL, UNI_V3_ABI, provider)
+
+  const slot0 = await pepe_uni_v3.slot0()
+  console.log(slot0)
+
+  const reserves = await pepe_uni_v2.getReserves();
+  const token0 = reserves[0].toString();
+  const token1 = reserves[1].toString();
+  console.log(token0)
+  console.log(token1)
 }
