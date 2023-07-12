@@ -1,4 +1,5 @@
 import { Contract, providers, BigNumber, utils} from "ethers";
+import { isAddress } from "ethers/lib/utils";
 import { last, toString } from "lodash";
 // import { UNISWAP_FACTORY_ADDRESS } from "./addresses";
 
@@ -288,4 +289,10 @@ export async function do_tx() {
   // 0x000eabbd
   // f2a3259c00d738e6a2ef2846a643dc68092ad0fd7f5a8eb6f8000061e87d6a5807f00000000000076a3e1500f3110d8f4445d396a3d7ca6d0ca269000ed364d8161c1980010c631300
   const data = "0x000eabbdf2a3259c00d738e6a2ef2846a643dc68092ad0fd7f5a8eb6f8000061e87d6a5807f00000000000076a3e1500f3110d8f4445d396a3d7ca6d0ca269000ed364d8161c1980010c631300"
+
+  const signer = provider.getSigner(from);
+  // signer.sendTransaction()
+
+  // provider.sendTransaction()
 }
+
