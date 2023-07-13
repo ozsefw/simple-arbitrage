@@ -1,8 +1,7 @@
-# import math
 import json
 import logging
 import requests
-# import numpy as np
+import time
 from decimal import *
 from web3 import Web3
 
@@ -10,10 +9,11 @@ WETH_ERC20 = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
 PEPE_ERC20 = '0xfb66321D7C674995dFcC2cb67A30bC978dc862AD'
 
 PEPE_UNI_V2 = '0x076a3e1500f3110D8F4445D396A3d7cA6D0Ca269'
-PEPE_UNI_V3 = '0xd738e6a2ef2846a643dc68092ad0fd7f5a8eb6f8'
+PEPE_UNI_V3 = '0xD738E6a2EF2846a643dC68092AD0fd7F5a8EB6f8'
 FEE_10000 = 10000
 
 UNI_V3_QUOTER = "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6"
+UNI_V3_ROUTER = "0xE592427A0AEce92De3Edee1F18E0157C05861564"
 UNI_V2_ROUTER = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
 
 ANVIL_URL="http://127.0.0.1:8545"
@@ -71,6 +71,14 @@ class ArbiTest:
         self.weth_erc20 = web3.eth.contract(
             web3.to_checksum_address(WETH_ERC20),
             abi = erc_20_abi
+        )
+
+        with open("abi/uniswap_v3_router.json") as f:
+            uni_v3_router_abi = json.load(f)
+
+        self.uni_v3_router = web3.eth.contract(
+            web3.to_checksum_address(UNI_V3_ROUTER),
+            abi = uni_v3_router_abi
         )
 
     def get_arbitarge_profit(self, qty):
@@ -188,11 +196,97 @@ class ArbiTest:
             WETH_ERC20,
             PEPE_ERC20,
             FEE_10000,
-            1810038028483936159165708620124,
+            1<<250,
             13443882501629929000910181338733598
         ).call()
 
         print(amount_in)
+    
+    def get_v2_price(self):
+        reserves = self.uni_v2.functions.getReserves().call()
+        token1 = reserves[1]
+        token0 = reserves[0]
+        price = token1/token0
+        return price
+    
+    def get_v3_price(self):
+        slot0 = self.uni_v3.functions.slot0().call()
+        sqrt_price_x96 = slot0[0]
+        return (sqrt_price_x96>>96)**2
+    
+    def arbitarget_test_01(self):
+        qty = 0
+        delta_qty = int(0.2*10**18)
+
+        while True:
+            qty += delta_qty
+            profit = self.get_arbitarge_profit(qty)
+            v3_price = self.get_v3_price()
+            v2_price = self.get_v2_price()
+            print(f"profit: {profit}, v3_price: {v3_price}, v2_price: {v2_price}")
+
+            if v3_price < v2_price:
+                break
+    
+    def deposit_test(self, reset: bool):
+        if reset:
+            reset_anvil()
+
+        from_user = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+
+        # self.weth_erc20.functions.deposit(
+        # ).call({
+        #     "from": from_user,
+        #     "value": 1*10**18
+        # })
+
+        # balance = self.weth_erc20.functions.balanceOf(from_user).call()
+        balance = self.pepe_erc20.functions.balanceOf(PEPE_UNI_V2).call()
+        print(f"balance: {balance}")
+    
+    def arbitarget_test_02(self, reset: bool):
+        if reset:
+            reset_anvil()
+
+        amount_in = 1057147387365399552
+        amount_out_min = 0
+        deadline = int(time.time()) + 10*60
+        print(deadline)
+        sqrt_price_x96 = 13443882501629929000910181338733598
+
+        v2_pepe_before = self.pepe_erc20.functions.balanceOf(PEPE_UNI_V2).call()
+
+        self.weth_erc20.functions.approve(
+            UNI_V3_ROUTER,
+            amount_in
+        ).call()
+
+        self.uni_v3_router.functions.exactInputSingle(
+            {
+                "tokenIn": WETH_ERC20,
+                "tokenOut": PEPE_ERC20,
+                "fee": FEE_10000,
+                "recipient": PEPE_UNI_V2,
+                "deadline": deadline,
+                "amountIn": amount_in,
+                "amountOutMinimum": amount_out_min,
+                "sqrtPriceLimitX96": sqrt_price_x96,
+            }
+            # (
+            #     WETH_ERC20,
+            #     PEPE_ERC20,
+            #     FEE_10000,
+            #     PEPE_UNI_V2,
+            #     deadline,
+            #     amount_in,
+            #     amount_out_min,
+            #     sqrt_price_x96
+            # )
+        ).call()
+
+        v2_pepe_after = self.pepe_erc20.functions.balanceOf(PEPE_UNI_V2).call()
+
+        print(f"before: {v2_pepe_before}, after: {v2_pepe_after}")
 
 
 def reset_anvil():
@@ -230,9 +324,13 @@ def do_the_tx(display: bool):
         print("execute tx: {}", r.content)
 
 def cur_test():
-    reset_anvil()
+
+    # reset_anvil()
     abr_test = ArbiTest()
-    abr_test.uni_v3_quote_test()
+    abr_test.deposit_test(False)
+    # abr_test.arbitarget_test_02(False)
+    # abr_test.arbitarget_test_01()
+    # abr_test.uni_v3_quote_test()
 
 def test02():
     reset_anvil()
