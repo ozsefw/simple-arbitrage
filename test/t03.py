@@ -328,14 +328,21 @@ class ArbiTest:
         eth_amount = reserves[0]
         return (pepe_amount, eth_amount)
 
-    def do_the_03_tx(self, amount_in):
-        v2_pepe_amount_before = self.pepe_erc20.functions.balanceOf(PEPE_UNI_V2).call()
-        # print(f"pepe amount before: {v2_pepe_amount_before}")
-
+    def init_deposit(self):
         self.weth_erc20.functions.deposit().transact({
             "from": ANVIL_USER[0],
             "value": 10*10**18
         })
+
+
+    def do_the_03_tx(self, amount_in):
+        v2_pepe_amount_before = self.pepe_erc20.functions.balanceOf(PEPE_UNI_V2).call()
+        # print(f"pepe amount before: {v2_pepe_amount_before}")
+
+            # self.weth_erc20.functions.deposit().transact({
+            #     "from": ANVIL_USER[0],
+            #     "value": 10*10**18
+            # })
 
         # anvil_balance = self.weth_erc20.functions.balanceOf(ANVIL_USER[0]).call()
         # print(f"{anvil_balance}")
@@ -394,6 +401,7 @@ class ArbiTest:
         amount_in = 1057147387365399552
 
         (v2_price_before, v3_price_before) = self.get_uni_v2_and_v3_price()
+        self.init_deposit()
         amount_out = self.do_the_03_tx(amount_in)
         (v2_price_after, v3_price_after) = self.get_uni_v2_and_v3_price()
 
@@ -410,10 +418,28 @@ class ArbiTest:
             reset_anvil()
             # (v2_price_before, v3_price_before) = self.get_uni_v2_and_v3_price()
             amount_in += delta_amount
-            amount_out = self.do_the_03_tx(amount_in)
+
+            self.init_deposit()
+            amount_out = self.do_the_03_tx(amount_in, False)
             profit = amount_out - amount_in
             print(f"profit: {profit:20}")
             # print(f"profit: {profit:20}, amount_in: {amount_in}, amount_out: {amount_out}")
+
+            (v2_price_after, v3_price_after) = self.get_uni_v2_and_v3_price()
+            print(f"v2_price: {v2_price_after}, v3_price: {v3_price_after}")
+
+            if v3_price_after < v2_price_after:
+                break
+    
+    def arbitarge_test_05(self):
+        reset_anvil()
+        self.init_deposit()
+
+        amount_in = int(0.2*10**18)
+        while True:
+            amount_out = self.do_the_03_tx(amount_in)
+            profit = amount_out - amount_in
+            print(f"profit: {profit:20}, amount_in: {amount_in:20}")
 
             (v2_price_after, v3_price_after) = self.get_uni_v2_and_v3_price()
             print(f"v2_price: {v2_price_after}, v3_price: {v3_price_after}")
@@ -461,7 +487,7 @@ def cur_test():
     abr_test = ArbiTest()
     # abr_test.deposit_test(False)
     # abr_test.uniswap_v3_swap_test(False)
-    abr_test.arbitarge_test_04()
+    abr_test.arbitarge_test_05()
     # abr_test.arbitarget_test_01()
     # abr_test.uni_v3_quote_test()
 
