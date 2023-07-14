@@ -1,6 +1,6 @@
-from cgitb import reset
 import json
-import logging
+import math
+# import logging
 import requests
 import time
 from decimal import *
@@ -24,7 +24,42 @@ ANVIL_USER  = [
 
 ANVIL_URL="http://127.0.0.1:8545"
 
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
+
+def reset_anvil():
+    data = {
+        "jsonrpc":"2.0",
+        "method":"anvil_reset",
+        "params":[{
+            "forking": {
+                "jsonRpcUrl": "https://eth-mainnet.alchemyapi.io/v2/Lc7oIGYeL_QvInzI0Wiu_pOZZDEKBrdf",
+                # "jsonRpcUrl": "https://hardworking-wild-river.discover.quiknode.pro/62310bbcb3606a8d23de74ab41d99029bc01af89/",
+                "blockNumber": 17589010,
+            }
+        }],
+        "id":1
+    }
+    r = requests.post(url=ANVIL_URL, json=data)
+    if r.status_code != 200:
+        raise Exception(r.content)
+
+def do_the_tx(display: bool):
+    # url = 'http://127.0.0.1:8545'
+    data =  {
+        "jsonrpc":"2.0",
+        "method":"eth_sendUnsignedTransaction",
+        "params":[{
+            "from": "0x76F36d497b51e48A288f03b4C1d7461e92247d5e",
+            "to": "0x2d2A7d56773ae7d5c7b9f1B57f7Be05039447B4D",
+            "data": "0x000eabbdf2a3259c00d738e6a2ef2846a643dc68092ad0fd7f5a8eb6f8000061e87d6a5807f00000000000076a3e1500f3110d8f4445d396a3d7ca6d0ca269000ed364d8161c1980010c631300"
+        }],
+        "id":1
+    }
+    r = requests.post(url=ANVIL_URL, json=data)
+    if r.status_code != 200:
+        raise Exception(r.content)
+    if display:
+        print("execute tx: {}", r.content)
 
 class ArbiTest:
     # V3_FEE = 10000
@@ -320,7 +355,7 @@ class ArbiTest:
         sqrt_price_x96 = slot0[0]
         v3_price = (sqrt_price_x96>>96)**2
 
-        return (int(v2_price), v3_price)
+        return [int(v2_price), v3_price]
 
     def get_uni_v2_reserves(self):
         reserves = self.uni_v2.functions.getReserves().call()
@@ -334,6 +369,8 @@ class ArbiTest:
             "value": 10*10**18
         })
 
+    def swap_from_v3_to_v2(self, amount_in):
+        return self.do_the_03_tx(amount_in)
 
     def do_the_03_tx(self, amount_in):
         v2_pepe_amount_before = self.pepe_erc20.functions.balanceOf(PEPE_UNI_V2).call()
@@ -369,6 +406,7 @@ class ArbiTest:
             "from": ANVIL_USER[0],
         })
 
+        # v2_pepe_amount_before = self.uni_v2.functions.getReserves().call()
         v2_pepe_amount_after = self.pepe_erc20.functions.balanceOf(PEPE_UNI_V2).call()
         # print(f"pepe amount after: {v2_pepe_amount_before}")
 
@@ -392,6 +430,7 @@ class ArbiTest:
         ).transact({
             "from": ANVIL_USER[0]
         })
+
         return expect_v2_eth_amount_out
 
 
@@ -446,40 +485,129 @@ class ArbiTest:
 
             if v3_price_after < v2_price_after:
                 break
+        
+    def init_v3_swap_env(self, reset: bool):
+        if reset:
+            reset_anvil()
+        init_amount = 10*10**18
+        self.weth_erc20.functions.deposit().transact({
+            "from": ANVIL_USER[0],
+            "value": init_amount
+        })
+        self.weth_erc20.functions.approve(
+            UNI_V3_ROUTER,
+            init_amount
+        ).transact({
+            "from": ANVIL_USER[0],
+        })
+    
+    def swap_by_uni_v3_price(self, target_price, reset: bool):
+        if reset:
+            self.init_v3_swap_env(reset)
+    
+    def arbitarge_test_06(self):
+        # price_rate = 0.977
+        amount_in = 0
+        delta_amount = int(0.05*10**18)
+        amount_in_vec = []
+        profit_vec = []
+        while True:
+            amount_in += delta_amount
+            print(f"--------------------: {amount_in/10**18:.4f}eth")
+            self.init_v3_swap_env(True)
+            [before_uni_v2_price, before_uni_v3_price] = self.get_uni_v2_and_v3_price()
 
-def reset_anvil():
-    data = {
-        "jsonrpc":"2.0",
-        "method":"anvil_reset",
-        "params":[{
-            "forking": {
-                "jsonRpcUrl": "https://eth-mainnet.alchemyapi.io/v2/Lc7oIGYeL_QvInzI0Wiu_pOZZDEKBrdf",
-                "blockNumber": 17589010,
-            }
-        }],
-        "id":1
-    }
-    r = requests.post(url=ANVIL_URL, json=data)
-    if r.status_code != 200:
-        raise Exception(r.content)
+            amount_in_vec.append(amount_in)
+            amount_out = self.swap_from_v3_to_v2(amount_in)
 
-def do_the_tx(display: bool):
-    # url = 'http://127.0.0.1:8545'
-    data =  {
-        "jsonrpc":"2.0",
-        "method":"eth_sendUnsignedTransaction",
-        "params":[{
-            "from": "0x76F36d497b51e48A288f03b4C1d7461e92247d5e",
-            "to": "0x2d2A7d56773ae7d5c7b9f1B57f7Be05039447B4D",
-            "data": "0x000eabbdf2a3259c00d738e6a2ef2846a643dc68092ad0fd7f5a8eb6f8000061e87d6a5807f00000000000076a3e1500f3110d8f4445d396a3d7ca6d0ca269000ed364d8161c1980010c631300"
-        }],
-        "id":1
-    }
-    r = requests.post(url=ANVIL_URL, json=data)
-    if r.status_code != 200:
-        raise Exception(r.content)
-    if display:
-        print("execute tx: {}", r.content)
+            [after_uni_v2_price, after_uni_v3_price] = self.get_uni_v2_and_v3_price()
+            # print(f"before price_rate: {before_uni_v2_price/before_uni_v3_price}, \
+                # v2: {before_uni_v2_price}, v3: {before_uni_v3_price}")
+            profit = amount_out - amount_in
+            profit_vec.append(profit)
+
+            print("before")
+            print(f"rate: {before_uni_v2_price/before_uni_v3_price}, \
+                v2: {before_uni_v2_price}, v3: {before_uni_v3_price}")
+            print(f"profit: {profit:20}")
+            print(f"rate: {after_uni_v2_price/after_uni_v3_price}, \
+                v2: {after_uni_v2_price}, v3: {after_uni_v3_price}")
+
+            if amount_in > int(1.2*10**18):
+                break
+        
+        print(amount_in_vec)
+        print(profit_vec)
+
+    def get_uni_v2_token_amount(self):
+        reserves = self.uni_v2.functions.getReserves().call()
+        eth_amount = reserves[0]
+        pepe_amount = reserves[1]
+        print(pepe_amount, eth_amount)
+        return [eth_amount, pepe_amount]
+
+    def get_uni_v3_token_amount(self):
+        liquidity = self.uni_v3.functions.liquidity().call()
+        slot0 = self.uni_v3.functions.slot0().call()
+        sqrt_price_x96 = slot0[0]
+        sqrt_price = sqrt_price_x96>>96
+        y = liquidity*sqrt_price
+        x = liquidity/sqrt_price
+
+        pepe_amount = y
+        eth_amount = x
+
+        print(pepe_amount, eth_amount)
+        return [eth_amount, pepe_amount]
+    
+    def arbitarge_test_07(self, reset: bool):
+        if reset:
+            reset_anvil()
+
+        slot0 = self.uni_v3.functions.slot0().call()
+        start_tick = (slot0[1]//200)*200 + 1
+        end_tick = start_tick + 200 + 1
+
+        for cur_tick in range(start_tick,end_tick):
+            result = self.uni_v3.functions.ticks(cur_tick).call()
+            print(f"cur_tick: {cur_tick}, {result[0]}")
+
+    def arbitarge_test_08(self):
+        fee = 0.99
+        for i in range(14, 18):
+            # reset_anvil()
+            self.init_v3_swap_env(True)
+            [_, price_1] = self.get_uni_v2_and_v3_price()
+            # delta_x = 10**(i+14)
+            delta_x = int(10**i)
+            delta_y = self.swap_from_v3_to_v2(delta_x)
+            [_, price_2] = self.get_uni_v2_and_v3_price()
+            r_x = (price_2 * fee * delta_x + delta_y)/(price_1 - price_2)
+            r_y = price_1 * r_x
+
+            liquidity = int(math.sqrt(r_x * r_y))
+            print(liquidity)
+
+        # 1441075417094653491544064
+        # 14410754170946532231086080
+        # 16010822964829739483660288
+        # 15999422052110418902515712
+        # 35761172538452163080754208
+
+        # f_0 = 1-0.99*0.99
+        # f_1 = 0.9997
+
+        # [r_0_x, r_0_y] = self.get_uni_v3_token_amount()
+        # [r_1_x, r_1_y] = self.get_uni_v2_token_amount()
+
+        # # r_0_x = uni_v3_eth_amount
+        # # r_0_y = uni_v3_pepe_amount
+        # # r_1_x = uni_v2_eth_amount
+        # # r_1_y = uni_v2_pepe_amount
+        # r_y = (r_0_y*r_1_x*f_1)/(r_0_y*f_1 + r_1_y)
+        # r_x = (r_0_x*r_1_y)/(r_0_y*f_0+r_1_y)
+        # best_amount = (math.sqrt(r_y*r_x*f_0) - r_x)/f_0
+        # print(best_amount)
 
 def cur_test():
 
@@ -487,7 +615,7 @@ def cur_test():
     abr_test = ArbiTest()
     # abr_test.deposit_test(False)
     # abr_test.uniswap_v3_swap_test(False)
-    abr_test.arbitarge_test_05()
+    abr_test.arbitarge_test_08()
     # abr_test.arbitarget_test_01()
     # abr_test.uni_v3_quote_test()
 
