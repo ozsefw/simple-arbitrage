@@ -1,6 +1,8 @@
+import subprocess
+import os
+import signal
 import json
 import math
-# import logging
 import requests
 import time
 from decimal import *
@@ -486,9 +488,9 @@ class ArbiTest:
             if v3_price_after < v2_price_after:
                 break
         
-    def init_v3_swap_env(self, reset: bool):
-        if reset:
-            reset_anvil()
+    def init_v3_swap_env(self):
+        # if reset:
+        #     reset_anvil()
         init_amount = 10*10**18
         self.weth_erc20.functions.deposit().transact({
             "from": ANVIL_USER[0],
@@ -504,17 +506,52 @@ class ArbiTest:
     def swap_by_uni_v3_price(self, target_price, reset: bool):
         if reset:
             self.init_v3_swap_env(reset)
-    
+
+    def take_anvil_snap_shot(self):
+        data = {
+            "jsonrpc":"2.0",
+            "method":"anvil_snapshot",
+            "params":[],
+            "id":1
+        }
+        r = requests.post(url=ANVIL_URL, json=data)
+
+        if r.status_code != 200:
+            raise Exception(r.content)
+
+        self.snap_shot_id = json.loads(r.content)["result"]
+
+    def revert_anvil(self):
+        data = {
+            "jsonrpc":"2.0",
+            "method":"anvil_revert",
+            "params":[
+                self.snap_shot_id
+            ],
+            "id":1
+        }
+        r = requests.post(url=ANVIL_URL, json=data)
+
+        if r.status_code != 200:
+            raise Exception(r.content)
+
+        r = json.loads(r.content)["result"]
+        if ~r:
+            print("revert failed")
+
+
     def arbitarge_test_06(self):
         # price_rate = 0.977
         amount_in = 0
         delta_amount = int(0.05*10**18)
         amount_in_vec = []
         profit_vec = []
+
         while True:
+            self.take_anvil_snap_shot()
             amount_in += delta_amount
             print(f"--------------------: {amount_in/10**18:.4f}eth")
-            self.init_v3_swap_env(True)
+            self.init_v3_swap_env()
             [before_uni_v2_price, before_uni_v3_price] = self.get_uni_v2_and_v3_price()
 
             amount_in_vec.append(amount_in)
@@ -527,14 +564,17 @@ class ArbiTest:
             profit_vec.append(profit)
 
             print("before")
-            print(f"rate: {before_uni_v2_price/before_uni_v3_price}, \
+            print(f"price rate: {before_uni_v2_price/before_uni_v3_price}, \
                 v2: {before_uni_v2_price}, v3: {before_uni_v3_price}")
             print(f"profit: {profit:20}")
-            print(f"rate: {after_uni_v2_price/after_uni_v3_price}, \
+            print(f"price rate: {after_uni_v2_price/after_uni_v3_price}, \
                 v2: {after_uni_v2_price}, v3: {after_uni_v3_price}")
+
+            self.revert_anvil()
 
             if amount_in > int(1.2*10**18):
                 break
+            # break
         
         print(amount_in_vec)
         print(profit_vec)
@@ -609,13 +649,50 @@ class ArbiTest:
         # best_amount = (math.sqrt(r_y*r_x*f_0) - r_x)/f_0
         # print(best_amount)
 
-def cur_test():
+def restart_anvil():
+    try:
+        pid_map = map(int, subprocess.check_output(["pidof", "anvil"]).split())
+        pid_list = [i for i in pid_map]
+        if len(pid_list) > 0:
+            print("kill: ", pid_list[0])
+            os.kill(pid_list[0], signal.SIGKILL)
+    except:
+        print("no anvil running")
+    
+    rpc_url = "https://eth-mainnet.nodereal.io/v1/5e75d4566e0048b3b195abbf1de9f366"
+    block_number = 17589010
 
+    subprocess.Popen(
+        [
+            "anvil",
+            "--fork-chain-id=1",
+            f"--fork-url={rpc_url}",
+            f"--fork-block-number={block_number}",
+            "--compute-units-per-second=300"
+        ],
+        stdout = subprocess.DEVNULL,
+        stderr=subprocess.STDOUT
+    )
+    time.sleep(1)
+    # data = {
+    #     "jsonrpc": "2.0",
+    #     "method": "eth_blockNumber",
+    #     "params": [],
+    #     "id": 83
+    # }
+    # result = requests.post(url=ANVIL_URL, json=data)
+    # print(result.content)
+
+def cur_test():
+    restart_anvil()
     # reset_anvil()
-    abr_test = ArbiTest()
+    # abr_test = ArbiTest()
     # abr_test.deposit_test(False)
     # abr_test.uniswap_v3_swap_test(False)
-    abr_test.arbitarge_test_08()
+    # abr_test.arbitarge_test_06()
+    # abr_test.take_anvil_snap_shot()
+    # abr_test.revert_anvil()
+    # print(abr_test.snap_shot)
     # abr_test.arbitarget_test_01()
     # abr_test.uni_v3_quote_test()
 
