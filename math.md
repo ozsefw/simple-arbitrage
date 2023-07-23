@@ -20,4 +20,3 @@ $$ \Delta y = \frac{ 0.997 \Delta x·y }{x+0.997 \Delta x}$$
 $$ \Delta y = \frac{ 997 \Delta x·y }{1000x + 997 \Delta x}$$
 
 > 放入了 $\Delta x$的x进去，能获取到多少y 
-

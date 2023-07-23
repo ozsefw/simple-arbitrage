@@ -225,7 +225,7 @@ def init_contract(address, abi):
     )
 
 
-class BasixTxRunner:
+class BasicTxRunner:
     def save_anvil_snapshot(self):
         data = {
             "jsonrpc": "2.0",
@@ -260,16 +260,26 @@ class BasixTxRunner:
 
         self.revert_evm()
 
-class TxRunner(BasixTxRunner):
     def __init__(self) -> None:
-        super().__init__()
         self.weth_erc20 = init_contract(WETH_ERC20, "erc20")
         self.pepe_erc20 = init_contract(PEPE_ERC20, "erc20")
-        self.uni_v3_router = init_contract(UNI_V3_ROUTER, "uniswap_v3_router")
         self.uni_v2_router = init_contract(UNI_V2_ROUTER, "uniswap_v2_router")
         self.uni_v2 = init_contract(PEPE_UNI_V2, "uniswap_v2")
+        self.uni_v3_router = init_contract(UNI_V3_ROUTER, "uniswap_v3_router")
+        self.uni_v3_quoter = init_contract(UNI_V3_QUOTER, "uniswap_v3_quoter")
         self.uni_v3 = init_contract(PEPE_UNI_V3, "uniswap_v3")
         self.account = ANVIL_USER[0]
+
+class TxRunner(BasicTxRunner):
+    def __init__(self) -> None:
+        super().__init__()
+        # self.weth_erc20 = init_contract(WETH_ERC20, "erc20")
+        # self.pepe_erc20 = init_contract(PEPE_ERC20, "erc20")
+        # self.uni_v3_router = init_contract(UNI_V3_ROUTER, "uniswap_v3_router")
+        # self.uni_v2_router = init_contract(UNI_V2_ROUTER, "uniswap_v2_router")
+        # self.uni_v2 = init_contract(PEPE_UNI_V2, "uniswap_v2")
+        # self.uni_v3 = init_contract(PEPE_UNI_V3, "uniswap_v3")
+        # self.account = ANVIL_USER[0]
 
     def init_uni_v3_env(self, amount_in):
         self.weth_erc20.functions.deposit(
@@ -388,4 +398,5 @@ def cur_test():
     # reserves = pepe_uni_v2.get_reserves()
     # print(reserves)
 
-cur_test()
+if __name__ == "__main__":
+    cur_test()
