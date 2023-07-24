@@ -1,8 +1,4 @@
-from audioop import reverse
-from gc import get_referents
 import math
-import re
-from webbrowser import get
 from BasicRunner import *
 
 class Runner(BasicTxRunner):
@@ -287,6 +283,48 @@ class Runner(BasicTxRunner):
             # print(f"{delta_x/(10**18):.2f} Eth: cacl: {int(cacl_profit):20}, real: {int(real_profit):20}, rate: {cacl_profit/real_profit:.3f}")
             # result.append((delta_x, cacl_profit, real_profit))
 
+    def get_v3_amount_out(self, eth_amount_in):
+        amount_out = self.uni_v3_quoter.functions.quoteExactInputSingle(
+            WETH_ERC20,
+            PEPE_ERC20,
+            10000,
+            eth_amount_in,
+            0,
+        ).call()
+
+        return amount_out
+    
+    def run_05(self):
+        for i in range(20):
+            amount_in = int(0.1*(i+1)*ETH)
+            f = 0.99
+            [r_x, r_y] = self.get_uni_v3_reserves()
+            L = self.get_uni_v3_liquidity()
+            xy_amount_out = int(f * amount_in * r_y/(r_x + f*amount_in))
+            quote_amout_out = self.get_v3_amount_out(amount_in)
+
+            print(f"{amount_in/ETH:.2f} Eth: {xy_amount_out:30}, {quote_amout_out:30}, {xy_amount_out/quote_amout_out:.3f}")
+
+    def run_06(self):
+        f0 = 0.99*0.99
+        f1 = 0.997
+        [v3_r_x, v3_r_y] = self.get_uni_v3_reserves()
+        [v2_r_x, v2_r_y] = self.get_uni_v2_reserves()
+
+        for i in range(2000):
+            delta_x = int(0.001*(i+1)*ETH)
+
+            cacl_profit = int(
+                (f0*f1*v2_r_x*v3_r_y*delta_x)
+                /
+                (f0*f1*v3_r_y*delta_x + f0*v2_r_y*delta_x + v3_r_x*v2_r_y)
+
+                - delta_x
+            )
+
+            real_profit = self.get_real_profit(delta_x)
+            print(f"{delta_x/ETH:.3f} Eth: cacl: {cacl_profit}, real: {real_profit}, {cacl_profit/real_profit}")
+
 if __name__ == "__main__":
     start_anvil()
-    Runner().run_04()
+    Runner().run_06()

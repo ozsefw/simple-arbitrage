@@ -3,3 +3,5 @@
 /build
 /tmp
 /tsconfig.tsbuildinfo
+/package-lock.json
+/test/__pycache__
