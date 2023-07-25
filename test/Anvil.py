@@ -3,7 +3,9 @@ import os
 import signal
 import time
 
-def restart_anvil():
+DEFAULT_BLOCK_NUMBER = 17589010
+
+def restart_anvil(block_number=DEFAULT_BLOCK_NUMBER):
     try:
         pid_map = map(int, subprocess.check_output(["pidof", "anvil"]).split())
         pid_list = [i for i in pid_map]
@@ -14,23 +16,26 @@ def restart_anvil():
         print("no anvil running")
     
     rpc_url = "https://eth-mainnet.nodereal.io/v1/5e75d4566e0048b3b195abbf1de9f366"
-    block_number = 17589010
+
+
+    cmd_list = [
+        "anvil",
+        "--fork-chain-id=1",
+        f"--fork-url={rpc_url}",
+        f"--fork-block-number={block_number}",
+        "--compute-units-per-second=300"
+    ]
 
     subprocess.Popen(
-        [
-            "anvil",
-            "--fork-chain-id=1",
-            f"--fork-url={rpc_url}",
-            f"--fork-block-number={block_number}",
-            "--compute-units-per-second=300"
-        ],
+        cmd_list,
         stdout = subprocess.DEVNULL,
         stderr=subprocess.STDOUT
     )
+
     time.sleep(5)
 
 
-def start_anvil():
+def start_anvil(block_number=DEFAULT_BLOCK_NUMBER):
     try:
         pid_map = map(int, subprocess.check_output(["pidof", "anvil"]).split())
         pid_list = [i for i in pid_map]
@@ -40,17 +45,19 @@ def start_anvil():
         pass
 
     rpc_url = "https://eth-mainnet.nodereal.io/v1/5e75d4566e0048b3b195abbf1de9f366"
-    block_number = 17589010
-
-    subprocess.Popen(
-        [
+    # block_number = bn 
+    cmd_list = [
             "anvil",
             "--fork-chain-id=1",
             f"--fork-url={rpc_url}",
             f"--fork-block-number={block_number}",
             "--compute-units-per-second=300"
-        ],
+    ]
+
+    subprocess.Popen(
+        cmd_list,
         stdout = subprocess.DEVNULL,
         stderr=subprocess.STDOUT
     )
+
     time.sleep(5)

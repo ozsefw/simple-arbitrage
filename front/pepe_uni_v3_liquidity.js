@@ -1,16 +1,5 @@
-// import * as echarts from 'echarts';
-// import echarts from 'echarts'; 
-
+// import {data} from "./pepe_data";
 var myChart = echarts.init(document.getElementById('main'));
-
-const colorList = [
-    '#4f81bd',
-    '#c0504d',
-    '#9bbb59',
-    '#604a7b',
-    '#948a54',
-    '#e46c0b'
-];
 
 // const data = [
 //   [10, 16, 3, 'A'],
@@ -90,6 +79,7 @@ const data = [
     // }
   };
 });
+
 
 const option = {
   title: {

@@ -110,7 +110,174 @@ class Runner(BasicTxRunner):
         # print(x_list)
         # print(y_list)
 
+class Runner2(BasicTxRunnerV2):
+    def __init__(self, address) -> None:
+        super().__init__()
+        self.rlb_uni_v3 = UniswapV3(address)
+        self.cur_liquidity = self.rlb_uni_v3.liquidity()
+        self.cur_tick = self.rlb_uni_v3.slot0()[1]
+        self.tick_spacing = self.rlb_uni_v3.tick_spacing()
+
+    def get_acc_liquidity_list(self):
+        # cur_liquidity = self.rlb_uni_v3.liquidity()
+        # tick_spacing = self.rlb_uni_v3.tick_spacing()
+        # cur_tick = self.rlb_uni_v3.slot0()[1]
+        compressed = self.cur_tick // self.tick_spacing
+        cur_tick_bitmap_index = compressed >> 8
+        bitmap_value = self.rlb_uni_v3.tick_bitmap(cur_tick_bitmap_index)
+
+        liquidity_list = []
+        base_compressed_index = cur_tick_bitmap_index << 8
+        prev_liquidity = 0
+
+        print("load tick info")
+        for i in range(256):
+            print(f"\r{i*100/256:.2f}", end="")
+            compressed_index = base_compressed_index + i
+            tick_index = compressed_index * self.tick_spacing 
+
+            if i == 0:
+                item = [tick_index, 0]
+                liquidity_list.append(item)
+
+            mask = 1<<i
+            if bitmap_value & mask != 0:
+
+                net_liquidity = self.rlb_uni_v3.ticks(tick_index)[1]
+                acc_liquidity = prev_liquidity + net_liquidity
+                item = [tick_index, acc_liquidity]
+                liquidity_list.append(item)
+                prev_liquidity = acc_liquidity
+
+            if i == 255:
+                item = [tick_index, acc_liquidity]
+                liquidity_list.append(item)
+        print()
+
+        delta_liquidity = 0
+        for i in range(len(liquidity_list)):
+            # tick_index = liquidity_list[i][0]
+            if i < len(liquidity_list)-1:
+                this_tick = liquidity_list[i][0]
+                next_tick = liquidity_list[i][1]
+                if (this_tick <= self.cur_tick) & (self.cur_tick < next_tick): 
+                    this_liquidity = liquidity_list[i][1]
+                    delta_liquidity = self.cur_liquidity - this_liquidity
+                    break
+        
+        result_list = []
+        for i in range(len(liquidity_list)):
+            this_liquidity = liquidity_list[i][1]
+            liquidity = this_liquidity + delta_liquidity
+            start_index = liquidity_list[i][0]
+
+            if i == (len(liquidity_list)-1):
+                end_index = start_index + 256
+            else:
+                end_index = liquidity_list[i+1][0]
+
+            item = [start_index, end_index, liquidity]
+            # print(f"[{start_index:8}, {end_index:8}, {liquidity//ETH}],")
+            result_list.append(item)
+
+        return result_list
+
+    def run_01(self):
+        cur_liquidity = self.rlb_uni_v3.liquidity()
+        print(cur_liquidity)
+        tick_spacing = self.rlb_uni_v3.tick_spacing()
+        print(tick_spacing)
+
+        cur_tick = self.rlb_uni_v3.slot0()[1]
+        compressed = cur_tick // tick_spacing
+
+        print(f"cur_tick: {cur_tick}, compresed: {compressed}")
+        cur_tick_bitmap_index = compressed >> 8
+        print(cur_tick_bitmap_index)
+        bitmap_value = self.rlb_uni_v3.tick_bitmap(cur_tick_bitmap_index)
+        print(f"{bitmap_value:0256b}")
+        value_pos = compressed % 256
+        print(f"{1<<value_pos:0256b}")
+
+        liquidity_list = []
+        base_compressed_index = cur_tick_bitmap_index << 8
+        prev_liquidity = 0
+
+        print("load tick info")
+        for i in range(256):
+            print(f"\r{i*100/256:.2f}", end="")
+            compressed_index = base_compressed_index + i
+            tick_index = compressed_index * 60
+
+            if i == 0:
+                item = [tick_index, 0]
+                liquidity_list.append(item)
+
+            mask = 1<<i
+            if bitmap_value & mask != 0:
+
+                net_liquidity = self.rlb_uni_v3.ticks(tick_index)[1]
+                acc_liquidity = prev_liquidity + net_liquidity
+                item = [tick_index, acc_liquidity]
+                liquidity_list.append(item)
+                prev_liquidity = acc_liquidity
+
+            if i == 255:
+                item = [tick_index, acc_liquidity]
+                liquidity_list.append(item)
+
+        delta_liquidity = 0
+        for i in range(len(liquidity_list)):
+            # tick_index = liquidity_list[i][0]
+            if i < len(liquidity_list)-1:
+                this_tick = liquidity_list[i][0]
+                next_tick = liquidity_list[i][1]
+                if (this_tick <= cur_tick) & (cur_tick < next_tick): 
+                    this_liquidity = liquidity_list[i][1]
+                    delta_liquidity = cur_liquidity - this_liquidity
+                    break
+
+        chart_data = []
+        for i in range(len(liquidity_list)):
+            this_liquidity = liquidity_list[i][1]
+            liquidity = this_liquidity + delta_liquidity
+            start_index = liquidity_list[i][0]
+
+            if i == (len(liquidity_list)-1):
+                end_index = start_index + 256
+            else:
+                end_index = liquidity_list[i+1][0]
+
+            item = [start_index, end_index, liquidity]
+            print(f"[{start_index:8}, {end_index:8}, {liquidity//ETH}],")
+            chart_data.append(item)
+    
+    # [ -107520,  -105840, 379476],
+    # [ -105840,  -105180, 380336],
+    # [ -105180,  -104820, 380798],
+    # [ -104820,  -104220, 382327],
+    # [ -104220,  -104040, 391693],
+    # [ -104040,  -103560, 392360],
+    # [ -103560,  -103500, 406688],
+    # [ -103500,  -103020, 412778],
+    def run_02(self):
+        # print(self.cur_liquidity)
+        liquidity_list = self.get_acc_liquidity_list()
+
+        for raw_item in liquidity_list:
+            [start, end, liquidity] = raw_item
+            # liquidity = liquidity_list
+            start_price = 1.0001**(start - self.cur_tick) * 100
+            end_price = 1.0001**(end - self.cur_tick) * 100
+            # item = [start_price, end_price, liquidity//ETH]
+            print(f"[{start_price:3.2f}, {end_price:3.2f}, {liquidity//ETH}],")
+
+
+RLB_UNI_V3 = "0x510100D5143e011Db24E2aa38abE85d73D5B2177"
+USDC_UNI_V3 = "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640"
+XRP_UNI_V3 = "0x663894588C6245Fe6FAC16713673471B2DaD4993"
+RLB_USDT_V3 = "0x33676385160f9d8f03a0db2821029882f7c79e93"
 
 if __name__ == "__main__":
-    start_anvil()
-    Runner().run_03()
+    start_anvil(17767000)
+    Runner2(RLB_USDT_V3).run_02()

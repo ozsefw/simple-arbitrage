@@ -10,6 +10,7 @@ PEPE_ERC20 = '0xfb66321D7C674995dFcC2cb67A30bC978dc862AD'
 
 PEPE_UNI_V2 = '0x076a3e1500f3110D8F4445D396A3d7cA6D0Ca269'
 PEPE_UNI_V3 = '0xD738E6a2EF2846a643dC68092AD0fd7F5a8EB6f8'
+# RLB_UNI_V3 = "0x510100D5143e011Db24E2aa38abE85d73D5B2177"
 
 UNI_V3_QUOTER = "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6"
 UNI_V3_ROUTER = "0xE592427A0AEce92De3Edee1F18E0157C05861564"
@@ -34,7 +35,6 @@ def init_contract(address, abi):
         web3.to_checksum_address(address),
         abi = erc_20_abi
     )
-
 
 class BasicTxRunner:
     def __init__(self) -> None:
@@ -101,14 +101,23 @@ class BasicTxRunner:
 
 class BasicTxRunnerV2:
     def __init__(self) -> None:
-        self.uni_v3 = UniswapV3()
+        self.weth_erc20 = init_contract(WETH_ERC20, "erc20")
+        self.pepe_erc20 = init_contract(PEPE_ERC20, "erc20")
+        self.uni_v2_router = init_contract(UNI_V2_ROUTER, "uniswap_v2_router")
+        # self.uni_v2 = init_contract(PEPE_UNI_V2, "uniswap_v2")
+        self.uni_v3_router = init_contract(UNI_V3_ROUTER, "uniswap_v3_router")
+        self.uni_v3_quoter = init_contract(UNI_V3_QUOTER, "uniswap_v3_quoter")
+        # self.uni_v3 = init_contract(PEPE_UNI_V3, "uniswap_v3")
+        self.account = ANVIL_USER[0]
+        # self.uni_v3 = UniswapV3()
+        # self.rlb_uni_v3 = UniswapV3(RLB_UNI_V3)
     
     # def get_uni_v3_slot0(self):
     #     return self.uni_v3.slot0()
 
 class UniswapV3:
-    def __init__(self) -> None:
-        contract = init_contract(PEPE_UNI_V3, "uniswap_v3")
+    def __init__(self, address) -> None:
+        contract = init_contract(address, "uniswap_v3")
         # init_contract(PEPE_UNI_V3, "uniswap_v3")
         self.functions = contract.functions
 
@@ -123,4 +132,7 @@ class UniswapV3:
 
     def liquidity(self):
         return self.functions.liquidity().call()
+
+    def tick_spacing(self):
+        return self.functions.tickSpacing().call()
     
