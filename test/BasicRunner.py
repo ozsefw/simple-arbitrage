@@ -57,8 +57,11 @@ class BasicTxRunner:
         response = requests.post(url=ANVIL_URL, json=data)
         if response.status_code != 200:
             raise Exception(response.content)
+
         msg = json.loads(response.content)
+
         self.snap_shot = msg["result"]
+        print("save snap_shot: {}", self.snap_shot)
 
     def revert_evm(self):
         data = {
@@ -70,6 +73,7 @@ class BasicTxRunner:
         response = requests.post(url=ANVIL_URL, json=data)
         if response.status_code != 200:
             raise Exception(response.content)
+        print("revert snap_shot: {}", self.snap_shot)
     
     def run_in_state(self, fun, params):
         self.save_anvil_snapshot()

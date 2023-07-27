@@ -46,7 +46,21 @@ def reset_anvil():
         raise Exception(r.content)
 
 def do_the_tx(display: bool):
-    # url = 'http://127.0.0.1:8545'
+    # # url = 'http://127.0.0.1:8545'
+    # data = {
+    #     "jsonrpc":"2.0",
+    #     "method":"anvil_impersonateAccount",
+    #     "params":[
+    #         "0x76F36d497b51e48A288f03b4C1d7461e92247d5e"
+    #     ],
+    #     "id":1
+    # }
+    # r = requests.post(url=ANVIL_URL, json=data)
+    # if r.status_code != 200:
+    #     raise Exception(r.content)
+    # if display:
+    #     print("execute tx: {}", r.content)
+
     data =  {
         "jsonrpc":"2.0",
         "method":"eth_sendUnsignedTransaction",
@@ -724,4 +738,6 @@ def test01():
         print(f"profit: {profit:18d}, amount_in: {Decimal(amount_in)/10**18:.3f}")
 
 # reset_anvil()
-cur_test()
+# cur_test()
+if __name__ == "__main__":
+    do_the_tx(True)
